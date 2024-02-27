@@ -31,7 +31,8 @@ struct CURLResponse GetRequest(CURL *curl_handle, const char *url)
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteHTMLCallback);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&response);
-	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36");
+	//curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36");
+	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) QtWebEngine/5.15.8 Chrome/87.0.4280.144 Safari/537.36");
 	res = curl_easy_perform(curl_handle);
 
 	if (res != CURLE_OK)

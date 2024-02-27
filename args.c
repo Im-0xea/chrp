@@ -2,9 +2,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "search.h"
+
 bool debug = false;
 
-int main(const int c, char * const * v)
+int main(const int c, char ** v)
 {
 	const char * short_options = "hVc:d";
 	const struct option long_options[] = {
@@ -15,7 +17,7 @@ int main(const int c, char * const * v)
 		{0, 0, 0, 0},
 	};
 
-	char * config = NULL;
+	//char * config = NULL;
 	do {
 		const int opt = getopt_long(c, v, short_options, long_options, NULL);
 
@@ -33,10 +35,10 @@ int main(const int c, char * const * v)
 			     " -c, --config  -> set config file\n");
 			return 0;
 		case 'V':
-			printf("Chrp Version %.1f\n", 0.1);
+			printf("Chrp Version %.1f\n", 0.2);
 			return 0;
 		case 'c':
-			config = optarg;
+			//config = optarg;
 			break;
 		case 'd':
 			debug = true;

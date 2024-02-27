@@ -7,12 +7,16 @@ src = [
   'args.c',
   'search.c',
   'curl_boilerplate.c',
+  'sixel_boilerplate.c',
+  'xml_boilerplate.c',
 
   'pubchem.c',
   'chemspider.c',
+  'cas.c',
 ]
 deps = [
   dependency('libcurl'),
+  dependency('libsixel'),
   dependency('libxml2'),
 ]
 

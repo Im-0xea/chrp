@@ -4,6 +4,8 @@
 
 #include <curl/curl.h>
 
+#include "search.h"
+
 int search(const int optind, const int c, char ** v)
 {
 	size_t search_len = 0;
@@ -42,11 +44,20 @@ int search(const int optind, const int c, char ** v)
 	char * encoded_search_term = curl_easy_escape(curl_handle, search_term, 0);
 	free(search_term);
 	const size_t encoded_search_len = strlen(encoded_search_term);
+	char cas_num[32] = "";
 
 	if (search_pubchem(encoded_search_term, encoded_search_len))
-		printf("Not Found\n\n");
+		printf("Not Found\n");
+
+	printf("\n");
+
 	if (search_chemspider(encoded_search_term, encoded_search_len))
-		printf("Not Found\n\n");
+		printf("Not Found\n");
+
+	printf("\n");
+
+	if (cas_num[0] != '\0')
+		search_cas(cas_num);
 
 	curl_free(encoded_search_term);
 	curl_easy_cleanup(curl_handle);
