@@ -12,6 +12,7 @@
 
 #include "args.h"
 #include "curl_boilerplate.h"
+#include "sixel_boilerplate.h"
 #include "xml_boilerplate.h"
 
 #define CAS_URL "https://commonchemistry.cas.org"
@@ -23,6 +24,8 @@
 struct cas_data {
 	char * name_generic;
 	char * cas_num;
+	char * structure_2d;
+	size_t structure_2d_size;
 	char * molecular_formula;
 	char * molecular_weight;
 	char * density;
@@ -66,8 +69,15 @@ int fetch_cas()
 	}
 	cJSON * molecular_weight = cJSON_GetObjectItemCaseSensitive(fetch_json, "molecularMass");
 	if (cJSON_IsString(molecular_weight) && molecular_weight->valuestring != NULL) {
-		data.molecular_weight = malloc(strlen(name_json->valuestring) + 1);
+		data.molecular_weight = malloc(strlen(molecular_weight->valuestring) + 1);
 		strcpy(data.molecular_weight, molecular_weight->valuestring);
+	}
+	cJSON * image = cJSON_GetObjectItemCaseSensitive(fetch_json, "image");
+	if (cJSON_IsString(image) && image->valuestring != NULL) {
+		size_t len = strlen(image->valuestring);
+		data.structure_2d = malloc(len + 1);
+		strcpy(data.structure_2d, image->valuestring);
+		data.structure_2d_size = len;
 	}
 	cJSON * exp_properties = cJSON_GetObjectItemCaseSensitive(fetch_json, "experimentalProperties");
 	cJSON * exp_property = NULL;
@@ -114,6 +124,10 @@ int query_cas()
 int flush_cas()
 {
 	printf("CAS:\n");
+	if (data.structure_2d) {
+		print_svg(data.structure_2d, data.structure_2d_size, 300, 300);
+		free(data.structure_2d);
+	}
 	if (data.cas_num)
 		printf("CAS number: %s\n", data.cas_num);
 	if (data.name_generic) {

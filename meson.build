@@ -14,11 +14,15 @@ src = [
   'chemspider.c',
   'cas.c',
 ]
+cc = meson.get_compiler('c')
 deps = [
+  cc.find_library('m', required : false),
   dependency('libcurl'),
+  dependency('cJSON'),
+  dependency('libpng'),
+  dependency('librsvg-2.0'),
   dependency('libsixel'),
   dependency('libxml2'),
-  dependency('cJSON'),
 ]
 
 exe = executable('chrp',

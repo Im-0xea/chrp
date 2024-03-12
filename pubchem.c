@@ -206,7 +206,7 @@ int flush_pubchem()
 {
 	printf("PubChem:\n");
 
-	if (print_sixel((unsigned char *) data.structure_2d, data.structure_2d_size, 300, 300)) {
+	if (print_png((unsigned char *) data.structure_2d, data.structure_2d_size, 300, 300)) {
 		printf("failed to render structure\n");
 	}
 	free(data.structure_2d);
