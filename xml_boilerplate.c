@@ -1,6 +1,25 @@
 #include <ctype.h>
 #include <string.h>
 
+#include <libxml/HTMLparser.h>
+
+char * html_format(const char * html)
+{
+	xmlDocPtr doc = htmlReadMemory(html, strlen(html), NULL, NULL, HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
+	if (!doc)
+		return NULL;
+
+	xmlNodePtr root = xmlDocGetRootElement(doc);
+	if (!root) {
+		xmlFreeDoc(doc);
+		return NULL;
+	}
+
+	char * content = (char *) xmlNodeGetContent(root);
+	xmlFreeDoc(doc);
+	return content;
+}
+
 char * strip_property(char * text)
 {
 	if (!text)

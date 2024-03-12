@@ -13,7 +13,7 @@
 #include "sixel_boilerplate.h"
 #include "xml_boilerplate.h"
 
-#define CHEMSPIDER_URL "http://www.chemspider.com"
+#define CHEMSPIDER_URL "https://www.chemspider.com"
 #define CHEMSPIDER_URL_LEN sizeof(CHEMSPIDER_URL)
 
 struct chemspider_data {
@@ -97,12 +97,14 @@ int fetch_chemspider(char * redirect_url)
 
 	free(response.html);
 	if (doc == NULL) {
+		curl_easy_cleanup(curl_handle);
 		return 1;
 	}
 
 	xmlXPathContextPtr xpath_ctx = xmlXPathNewContext(doc);
 	if (xpath_ctx == NULL) {
 		xmlFreeDoc(doc);
+		curl_easy_cleanup(curl_handle);
 		return 1;
 	}
 	xmlXPathObjectPtr xpath_mol_form = xmlXPathEvalExpression(BAD_CAST "/html/body[@class='rsc-ui']/form[@id='aspnetForm']/div[@class='main-content viewport']/div[@class='content-wrapper']/div[@id='ctl00_ctl00_ContentSection_ContentPlaceHolder1_RecordViewDetails_rptDetailsView_ctl00_pnlDetailsView']/div[@class='structure-head']/ul[@class='struct-props']/li/span[@id='ctl00_ctl00_ContentSection_ContentPlaceHolder1_RecordViewDetails_rptDetailsView_ctl00_prop_MF']", xpath_ctx);
@@ -154,6 +156,7 @@ int fetch_chemspider(char * redirect_url)
 	xmlXPathFreeObject(xpath_mol_form);
 	xmlXPathFreeObject(xpath_mol_weight);
 	xmlXPathFreeObject(xpath_melt_a);
+	xmlXPathFreeObject(xpath_melt_b);
 	xmlXPathFreeObject(xpath_boil_a);
 	xmlXPathFreeObject(xpath_boil_b);
 	xmlXPathFreeObject(xpath_flash_b);
@@ -161,6 +164,7 @@ int fetch_chemspider(char * redirect_url)
 	xmlXPathFreeContext(xpath_ctx);
 
 	xmlFreeDoc(doc);
+	curl_easy_cleanup(curl_handle);
 	return 0;
 }
 int structure_chemspider(char * redirect_url)
@@ -217,8 +221,9 @@ int flush_chemspider()
 			printf("\t%s\n", strip_property(data.melting_points[x]));
 			free(data.melting_points[x]);
 		}
-		free(data.melting_points);
 	}
+	if (data.melting_points)
+		free(data.melting_points);
 
 	if (data.boiling_point_count) {
 		printf("Boiling Point(s):\n");
@@ -226,8 +231,9 @@ int flush_chemspider()
 			printf("\t%s\n", strip_property(data.boiling_points[x]));
 			free(data.boiling_points[x]);
 		}
-		free(data.boiling_points);
 	}
+	if (data.boiling_points)
+		free(data.boiling_points);
 	return 0;
 }
 int search_chemspider(char * encoded_search_term, const size_t encoded_search_len)

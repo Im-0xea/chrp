@@ -119,7 +119,7 @@ int structure_pubchem()
 	curl_easy_cleanup(curl_handle);
 	return 0;
 }
-int fetch_pubchem()
+int fetch_pubchem(char * cas_num)
 {
 	CURL *curl_handle = curl_easy_init();
 
@@ -187,6 +187,14 @@ int fetch_pubchem()
 		}
 	}
 	xmlXPathFreeObject(xpath_sol);
+	xmlXPathObjectPtr xpath_cas = xmlXPathEvalExpression(BAD_CAST "/ns:Record/ns:Section/ns:TOCHeading[text()='Names and Identifiers']/../ns:Section/ns:TOCHeading[text()='Other Identifiers']/../ns:Section/ns:TOCHeading[text()='CAS']/../ns:Information/ns:Value", xpath_ctx);
+	if (xpath_cas != NULL && xpath_cas->nodesetval != NULL) {
+		xmlNodePtr value = xpath_cas->nodesetval->nodeTab[0];
+		char * value_content = (char *) xmlNodeGetContent(value);
+		strcpy(cas_num, strip_property(value_content));
+		free(value_content);
+	}
+	xmlXPathFreeObject(xpath_cas);
 
 	xmlXPathFreeContext(xpath_ctx);
 
@@ -217,8 +225,9 @@ int flush_pubchem()
 			printf("\t%s\n", strip_property(data.melting_points[x]));
 			free(data.melting_points[x]);
 		}
-		free(data.melting_points);
 	}
+	if (data.melting_points)
+		free(data.melting_points);
 
 	if (data.boiling_point_count) {
 		printf("Boiling Point(s):\n");
@@ -226,8 +235,9 @@ int flush_pubchem()
 			printf("\t%s\n", strip_property(data.boiling_points[x]));
 			free(data.boiling_points[x]);
 		}
-		free(data.boiling_points);
 	}
+	if (data.boiling_points)
+		free(data.boiling_points);
 
 	if (data.solubility_count) {
 		printf("Solubility:\n");
@@ -235,12 +245,13 @@ int flush_pubchem()
 			printf("\t%s\n", strip_property(data.solubilities[x]));
 			free(data.solubilities[x]);
 		}
-		free(data.solubilities);
 	}
+	if (data.solubilities)
+		free(data.solubilities);
 
 	return 0;
 }
-int search_pubchem(char * encoded_search_term, const size_t encoded_search_len)
+int search_pubchem(char * encoded_search_term, const size_t encoded_search_len, char * cas_num)
 {
 	data.cid = NULL;
 
@@ -249,7 +260,7 @@ int search_pubchem(char * encoded_search_term, const size_t encoded_search_len)
 	if (!data.cid)
 		return 1;
 
-	fetch_pubchem();
+	fetch_pubchem(cas_num);
 	structure_pubchem();
 
 	flush_pubchem();

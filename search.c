@@ -12,10 +12,9 @@ int search(const int optind, const int c, char ** v)
 	char * search_term;
 	if (optind < c) {
 		for (int st = optind; st < c; ++st)
-			search_len += strlen(v[st]);
+			search_len += strlen(v[st]) + 1;
 
-		search_len += (c - optind) - 2;
-		search_term = malloc(search_len + 1);
+		search_term = malloc(search_len);
 		*search_term = '\0';
 
 		for (int st = optind; st < c; ++st) {
@@ -44,9 +43,10 @@ int search(const int optind, const int c, char ** v)
 	char * encoded_search_term = curl_easy_escape(curl_handle, search_term, 0);
 	free(search_term);
 	const size_t encoded_search_len = strlen(encoded_search_term);
-	char cas_num[32] = "";
+	char * cas_num = malloc(32);
+	*cas_num = '\0';
 
-	if (search_pubchem(encoded_search_term, encoded_search_len))
+	if (search_pubchem(encoded_search_term, encoded_search_len, cas_num))
 		printf("Not Found\n");
 
 	printf("\n");
@@ -56,9 +56,10 @@ int search(const int optind, const int c, char ** v)
 
 	printf("\n");
 
-	if (cas_num[0] != '\0')
+	if (*cas_num != '\0')
 		search_cas(cas_num);
 
+	free(cas_num);
 	curl_free(encoded_search_term);
 	curl_easy_cleanup(curl_handle);
 	curl_global_cleanup();

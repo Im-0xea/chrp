@@ -18,6 +18,7 @@ deps = [
   dependency('libcurl'),
   dependency('libsixel'),
   dependency('libxml2'),
+  dependency('cJSON'),
 ]
 
 exe = executable('chrp',

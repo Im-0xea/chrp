@@ -31,6 +31,7 @@ int print_sixel(unsigned char * image, size_t image_size, size_t width, size_t h
 	}
 	close(fd);
 	status = sixel_encoder_encode(encoder, sixel_path);
+	printf("\n");
 	remove(sixel_path);
 	if (SIXEL_FAILED(status)) {
 		printf("failed to encode image to sixel\n");
