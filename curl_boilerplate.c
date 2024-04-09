@@ -21,8 +21,16 @@ size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb, void *userp)
 	mem->html[mem->size] = 0;
 	return realsize;
 }
-
-struct CURLResponse GetRequest(CURL *curl_handle, const char *url)
+struct CURLResponse GetPost(CURL * curl_handle, const char * url, const char * post)
+{
+	struct curl_slist *headers = NULL;
+	headers = curl_slist_append(headers, "Content-Type: application/json");
+	headers = curl_slist_append(headers, "Accept: application/json");
+	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
+	curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post);
+	return GetRequest(curl_handle, url);
+}
+struct CURLResponse GetRequest(CURL * curl_handle, const char * url)
 {
 	CURLcode res;
 	struct CURLResponse response;

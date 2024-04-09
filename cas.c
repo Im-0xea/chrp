@@ -21,7 +21,7 @@
 #define CAS_API_URL "https://rboq1qukh0.execute-api.us-east-2.amazonaws.com"
 #define CAS_API_URL_LEN sizeof(CAS_API_URL)
 
-struct cas_data {
+static struct cas_data {
 	char * name_generic;
 	char * cas_num;
 	char * structure_2d;
@@ -33,8 +33,7 @@ struct cas_data {
 	char ** melting_points;
 	size_t boiling_point_count;
 	char ** boiling_points;
-};
-static struct cas_data data;
+} data;
 
 int fetch_cas()
 {
@@ -53,6 +52,8 @@ int fetch_cas()
 
 	cJSON * fetch_json = cJSON_Parse(response.html);
 	if (!fetch_json) {
+		free(response.html);
+		curl_easy_cleanup(curl_handle);
 		printf("received invalid json\n");
 		return 1;
 	}
@@ -81,10 +82,13 @@ int fetch_cas()
 	}
 	cJSON * exp_properties = cJSON_GetObjectItemCaseSensitive(fetch_json, "experimentalProperties");
 	cJSON * exp_property = NULL;
-	cJSON_ArrayForEach(exp_properties, exp_property) {
+	for (int ep_i = 0; ep_i < cJSON_GetArraySize(exp_properties); ++ep_i) {
+		exp_property = cJSON_GetArrayItem(exp_properties, ep_i);
+		if (!exp_property)
+			break;
 		cJSON * property_name = cJSON_GetObjectItemCaseSensitive(exp_property, "name");
 		if (cJSON_IsString(property_name) && property_name->valuestring != NULL) {
-			if (strcmp("Melting Point", exp_property->valuestring) == 0) {
+			if (strcmp("Melting Point", property_name->valuestring) == 0) {
 				cJSON * melt = cJSON_GetObjectItemCaseSensitive(exp_property, "property");
 				if (cJSON_IsString(melt) && melt->valuestring != NULL) {
 					data.melting_points = malloc(1 * sizeof(char *));
@@ -92,7 +96,7 @@ int fetch_cas()
 					strcpy(data.melting_points[0], melt->valuestring);
 					data.melting_point_count = 1;
 				}
-			} else if (strcmp("Boiling Point", exp_property->valuestring) == 0) {
+			} else if (strcmp("Boiling Point", property_name->valuestring) == 0) {
 				cJSON * boil = cJSON_GetObjectItemCaseSensitive(exp_property, "property");
 				if (cJSON_IsString(boil) && boil->valuestring != NULL) {
 					data.boiling_points = malloc(1 * sizeof(char *));
@@ -100,7 +104,7 @@ int fetch_cas()
 					strcpy(data.boiling_points[0], boil->valuestring);
 					data.boiling_point_count = 1;
 				}
-			} else if (strcmp("Density", exp_property->valuestring) == 0) {
+			} else if (strcmp("Density", property_name->valuestring) == 0) {
 				cJSON * density = cJSON_GetObjectItemCaseSensitive(exp_property, "property");
 				if (cJSON_IsString(density) && density->valuestring != NULL) {
 					data.density = malloc(strlen(density->valuestring));
@@ -124,6 +128,11 @@ int query_cas()
 int flush_cas()
 {
 	printf("CAS:\n");
+	if (!data.cas_num) {
+		printf("not found\n\n");
+		return 1;
+	}
+
 	if (data.structure_2d) {
 		print_svg(data.structure_2d, data.structure_2d_size, 300, 300);
 		free(data.structure_2d);
@@ -131,7 +140,8 @@ int flush_cas()
 	if (data.cas_num)
 		printf("CAS number: %s\n", data.cas_num);
 	if (data.name_generic) {
-		printf("CAS name: %s\n", data.name_generic);
+		char * tmp = html_format(strip_property(data.name_generic));
+		printf("CAS name: %s\n", tmp);
 		free(data.name_generic);
 	}
 	if (data.molecular_formula) {
@@ -166,6 +176,7 @@ int flush_cas()
 		}
 		free(data.boiling_points);
 	}
+	printf("\n");
 	return 0;
 }
 int search_cas(char * cas_num)
@@ -175,10 +186,8 @@ int search_cas(char * cas_num)
 	else
 		data.cas_num = cas_num;
 	
-	if (!data.cas_num)
-		return 1;
-
-	fetch_cas();
+	if (data.cas_num)
+		fetch_cas();
 
 	flush_cas();
 	return 0;

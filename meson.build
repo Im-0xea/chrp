@@ -13,6 +13,7 @@ src = [
   'pubchem.c',
   'chemspider.c',
   'cas.c',
+  'psychonautwiki.c',
 ]
 cc = meson.get_compiler('c')
 deps = [

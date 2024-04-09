@@ -18,7 +18,7 @@
 #define PUBCHEM_URL "https://pubchem.ncbi.nlm.nih.gov"
 #define PUBCHEM_URL_LEN sizeof(PUBCHEM_URL)
 
-struct pubchem_data {
+static struct pubchem_data {
 	char * name_generic;
 	char * name_IUPAC;
 	char * cid;
@@ -32,8 +32,7 @@ struct pubchem_data {
 	char ** boiling_points;
 	size_t solubility_count;
 	char ** solubilities;
-};
-static struct pubchem_data data;
+} data;
 
 int query_pubchem(char * encoded_search_term, const size_t encoded_search_len)
 {
@@ -205,6 +204,10 @@ int fetch_pubchem(char * cas_num)
 int flush_pubchem()
 {
 	printf("PubChem:\n");
+	if (!data.cid) {
+		printf("not found\n\n");
+		return 1;
+	}
 
 	if (print_png((unsigned char *) data.structure_2d, data.structure_2d_size, 300, 300)) {
 		printf("failed to render structure\n");
@@ -249,6 +252,7 @@ int flush_pubchem()
 	if (data.solubilities)
 		free(data.solubilities);
 
+	printf("\n");
 	return 0;
 }
 int search_pubchem(char * encoded_search_term, const size_t encoded_search_len, char * cas_num)
@@ -257,11 +261,10 @@ int search_pubchem(char * encoded_search_term, const size_t encoded_search_len, 
 
 	query_pubchem(encoded_search_term, encoded_search_len);
 
-	if (!data.cid)
-		return 1;
-
-	fetch_pubchem(cas_num);
-	structure_pubchem();
+	if (data.cid) {
+		fetch_pubchem(cas_num);
+		structure_pubchem();
+	}
 
 	flush_pubchem();
 

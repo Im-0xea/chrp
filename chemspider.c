@@ -16,9 +16,9 @@
 #define CHEMSPIDER_URL "https://www.chemspider.com"
 #define CHEMSPIDER_URL_LEN sizeof(CHEMSPIDER_URL)
 
-struct chemspider_data {
+static struct chemspider_data {
 	char * name_generic;
-	char id[16];
+	char * id;
 	char * structure_2d;
 	size_t structure_2d_size;
 	char * molecular_formula;
@@ -28,8 +28,7 @@ struct chemspider_data {
 	char ** melting_points;
 	size_t boiling_point_count;
 	char ** boiling_points;
-};
-static struct chemspider_data data;
+} data;
 
 int query_chemspider(char * encoded_search_term, const size_t encoded_search_len, char ** redirect_url)
 {
@@ -171,8 +170,8 @@ int structure_chemspider(char * redirect_url)
 {
 	unsigned long id_num;
 	sscanf(redirect_url, "/Chemical-Structure.%lu", &id_num);
-	sprintf(data.id, "%lu", id_num);
-	if (!data.id[0])
+	data.id = malloc(64 * sizeof(char));
+	if (snprintf(data.id, 64, "%lu", id_num) < 1)
 		return 1;
 
 	CURL *curl_handle = curl_easy_init();
@@ -196,12 +195,17 @@ int flush_chemspider()
 {
 	printf("ChemSpider:\n");
 
+	if (!data.id) {
+		printf("not found\n\n");
+		return 1;
+	}
+
 	if (print_png((unsigned char *) data.structure_2d, data.structure_2d_size, 300, 300)) {
 		printf("failed to render structure\n");
 	}
 	free(data.structure_2d);
 	printf("ChemSpider Id: %s\n", data.id);
-	//free(data.id);
+	free(data.id);
 	if (data.molecular_formula) {
 		printf("Molecular Formula: %s\n", strip_property(data.molecular_formula));
 		free(data.molecular_formula);
@@ -234,19 +238,19 @@ int flush_chemspider()
 	}
 	if (data.boiling_points)
 		free(data.boiling_points);
+
+	printf("\n");
 	return 0;
 }
 int search_chemspider(char * encoded_search_term, const size_t encoded_search_len)
 {
-
 	char * redirect_url = NULL;
 	query_chemspider(encoded_search_term, encoded_search_len, &redirect_url);
 
-	if (redirect_url == NULL)
-		return 1;
-
-	structure_chemspider(redirect_url);
-	fetch_chemspider(redirect_url);
+	if (redirect_url) {
+		structure_chemspider(redirect_url);
+		fetch_chemspider(redirect_url);
+	}
 
 	flush_chemspider();
 
