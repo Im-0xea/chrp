@@ -1,0 +1,1 @@
+option('svg_renderer', type : 'combo', choices : ['librsvg', 'nanosvg'], value : 'librsvg')

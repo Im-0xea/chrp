@@ -3,21 +3,21 @@
 
 #include <libxml/HTMLparser.h>
 
-char * html_format(const char * html)
+int html_format(const char * in, char ** out)
 {
-	xmlDocPtr doc = htmlReadMemory(html, strlen(html), NULL, NULL, HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
+	xmlDocPtr doc = htmlReadMemory(in, strlen(in), NULL, NULL, HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
 	if (!doc)
-		return NULL;
+		return 1;
 
 	xmlNodePtr root = xmlDocGetRootElement(doc);
 	if (!root) {
 		xmlFreeDoc(doc);
-		return NULL;
+		return 1;
 	}
 
-	char * content = (char *) xmlNodeGetContent(root);
+	*out = (char *) xmlNodeGetContent(root);
 	xmlFreeDoc(doc);
-	return content;
+	return 0;
 }
 
 char * strip_property(char * text)

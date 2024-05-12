@@ -3,6 +3,7 @@
 
 #include <curl/curl.h>
 
+#include "args.h"
 #include "curl_boilerplate.h"
 
 size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb, void *userp)
@@ -34,6 +35,10 @@ struct CURLResponse GetRequest(CURL * curl_handle, const char * url)
 {
 	CURLcode res;
 	struct CURLResponse response;
+
+	if (debug)
+		printf("curling: '%s'\n", url);
+
 	response.html = malloc(1);
 	response.size = 0;
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
@@ -44,7 +49,8 @@ struct CURLResponse GetRequest(CURL * curl_handle, const char * url)
 	res = curl_easy_perform(curl_handle);
 
 	if (res != CURLE_OK)
-		fprintf(stderr, "GET request failed: %s\n", curl_easy_strerror(res));
+		if (debug)
+			fprintf(stderr, "GET request failed: %s\n", curl_easy_strerror(res));
 
 	return response;
 }
