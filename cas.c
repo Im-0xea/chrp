@@ -70,10 +70,12 @@ int fetch_cas(struct data_generic * data)
 	cJSON * image = cJSON_GetObjectItemCaseSensitive(fetch_json, "image");
 	if (cJSON_IsString(image) && image->valuestring != NULL) {
 		size_t len = strlen(image->valuestring);
-		data->structure = malloc(len + 1);
-		strcpy(data->structure, image->valuestring);
-		data->structure_size = len;
-		data->structure_type = SVG;
+		if (len) {
+			data->structure = malloc(len + 1);
+			strcpy(data->structure, image->valuestring);
+			data->structure_size = len;
+			data->structure_type = SVG;
+		}
 	}
 	cJSON * exp_properties = cJSON_GetObjectItemCaseSensitive(fetch_json, "experimentalProperties");
 	cJSON * exp_property = NULL;

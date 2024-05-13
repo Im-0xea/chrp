@@ -32,6 +32,7 @@ void *search_api(void * arg) {
 		if (bytes_received == POST_ALLOC_CHUNK) {
 			if ((search_term_alloc = realloc(search_term_alloc, total_bytes_received + POST_ALLOC_CHUNK)) == NULL) {
 				printf("realloc\n");
+				close(new_socket);
 				return NULL;
 			}
 		} else {
@@ -39,20 +40,48 @@ void *search_api(void * arg) {
 		}
 	}
 	search_term_alloc[total_bytes_received] = '\0';
-	char * search_term = strstr(search_term_alloc, "\r\n\r\n") + 4;
-	if (!search_term) {
-		printf("invalid post received\n");
+	if (strstr(search_term_alloc, "Access-Control-Request")) {
+		printf("CORS preflight detected\n");
+		free(search_term_alloc);
+
+		char * response = "HTTP/1.1 200 OK\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Headers: Content-Type\n\n";
+		send(new_socket, response, strlen(response), 0);
 		return NULL;
 	}
+	char * search_term = strstr(search_term_alloc, "\r\n\r\n");
+	if (!search_term) {
+		printf("invalid post received: %s\n", search_term_alloc);
+		free(search_term_alloc);
+		close(new_socket);
+		return NULL;
+	}
+	search_term += 4;
 	size_t search_len = total_bytes_received - (search_term - search_term_alloc);
 
 	printf("received request: %s\n", search_term);
 
-	char * response = "HTTP/1.1 200 OK\nContent-Type: text/plain\n\n";
+	//char * response = "HTTP/1.1 200 OK\nContent-Type: text/plain\n\n";
+	//char * response = "HTTP/1.1 200 OK\nContent-Type: application/json\r\n\r\n";
+	char * response = "HTTP/1.1 200 OK\nAccess-Control-Allow-Origin: *\r\n\r\n";
 	send(new_socket, response, strlen(response), 0);
 
+	cJSON * post_json = cJSON_Parse(search_term);
+	if (!post_json) {
+		printf("post does not contain json: %s\n", search_term_alloc);
+		free(search_term_alloc);
+		close(new_socket);
+		return NULL;
+	}
+	cJSON * name_json = cJSON_GetObjectItemCaseSensitive(post_json, "name");
+	if (!cJSON_IsString(name_json) || !name_json->valuestring) {
+		printf("failed to parse query\n");
+		free(search_term_alloc);
+		close(new_socket);
+		return NULL;
+	}
 	cJSON * json_results[4];
-	int ret = search_raw(search_term, search_len, (cJSON **)&json_results);
+	int ret = search_raw(name_json->valuestring, strlen(name_json->valuestring), (cJSON **)&json_results);
+	cJSON_Delete(post_json);
 	free(search_term_alloc);
 
 	if (!ret) {
@@ -63,10 +92,16 @@ void *search_api(void * arg) {
 		}
 		cJSON_AddItemToObject(json_root, "results", json_database_results);
 		char * json_text = cJSON_Print(json_root);
-		send(new_socket, json_text, strlen(json_text), 0);
-		//printf("%s\n", json_text);
-
+		//size_t result_text_size = strlen(json_text) + sizeof("HTTP/1.1 200 OK\nAccess-Control-Allow-Origin: *\n\n");
+		size_t result_text_size = strlen(json_text);
+		char * result_text = malloc(result_text_size);
+		//strcpy(result_text, "HTTP/1.1 200 OK\n\rAccess-Control-Allow-Origin: *\n\r\n\r");
+		*result_text = '\0';
+		strcat(result_text, json_text);
 		free(json_text);
+		send(new_socket, result_text, result_text_size, 0);
+		printf("reply send\n");
+
 		cJSON_Delete(json_root);
 	}
 
@@ -152,22 +187,27 @@ int flush_json(const char * database, struct data_generic * data, bool print_id,
 
 	if (data->structure && data->structure_type != NONE) {
 		base64_encodestate state_size, state_blob;
-		base64_init_encodestate(&state_size);
 		base64_init_encodestate(&state_blob);
+		base64_init_encodestate(&state_size);
 		size_t base64_size = base64_encode_length(data->structure_size, &state_size);
 		char * html_image = NULL;
 		if (data->structure_type == PNG) {
-			//cJSON_AddStringToObject(db_json, "structure_type", "PNG");
-			html_image = malloc(sizeof("data:image/png;base64,") + base64_size);
-			strcpy(html_image, "data:image/png;base64,");
-			base64_encode_block(data->structure, data->structure_size, html_image + sizeof("data:image/png;base64,") - 1, &state_blob);
+			cJSON_AddStringToObject(db_json, "structure_type", "PNG");
+			html_image = malloc(sizeof("data:image/png;charset=utf-8;base64,") + base64_size);
+			strcpy(html_image, "data:image/png;charset=utf-8;base64,");
+			size_t enc_len = base64_encode_block(data->structure, data->structure_size, html_image + sizeof("data:image/png;charset=utf-8;base64,") - 1, &state_blob);
+			enc_len += base64_encode_blockend((html_image + sizeof("data:image/png;charset=utf-8;base64,") - 1) + enc_len, &state_blob);
+			html_image[(sizeof("data:image/png;charset=utf-8;base64,") - 1) + enc_len] = 0;
+			
 		} else if (data->structure_type == SVG) {
-			//cJSON_AddStringToObject(db_json, "structure_type", "SVG");
-			html_image = malloc(sizeof("data:image/svg+xml;base64,") + base64_size);
-			strcpy(html_image, "data:image/svg+xml;base64,");
-			base64_encode_block(data->structure, data->structure_size, html_image + sizeof("data:image/svg+xml;base64,") - 1, &state_blob);
+			cJSON_AddStringToObject(db_json, "structure_type", "SVG");
+			html_image = malloc(sizeof("data:image/svg+xml;charset=utf-8;base64,") + base64_size);
+			strcpy(html_image, "data:image/svg+xml;charset=utf-8;base64,");
+			int enc_len = base64_encode_block(data->structure, data->structure_size, html_image + sizeof("data:image/svg+xml;charset=utf-8;base64,") - 1, &state_blob);
+			enc_len += base64_encode_blockend((html_image + sizeof("data:image/svg+xml;charset=utf-8;base64,") - 1) + enc_len, &state_blob);
+			html_image[(sizeof("data:image/svg+xml;charset=utf-8;base64,") - 1) + enc_len] = 0;
 		}
-		//cJSON_AddStringToObject(db_json, "structure", html_image);
+		cJSON_AddStringToObject(db_json, "structure", html_image);
 		free(html_image);
 		free(data->structure);
 	}
